@@ -164,10 +164,13 @@ export default definePlugin({
     priorityMembersFilterIgnoredUsers(priorityMembers, priorityMember, partiedMembers) {
         var filteredUser = priorityMember.user;
         if (this.isIgnoredUser(filteredUser)) {
+            if (partiedMembers.length === 1) {
+                return null;
+            }
             filteredUser = partiedMembers.find(user => !priorityMembers.some(pm => pm.user.id === user.id));
 
             if (!filteredUser) {
-                filteredUser = priorityMember.user;
+                return null;
             }
         }
         const filteredPriorityMember = {
