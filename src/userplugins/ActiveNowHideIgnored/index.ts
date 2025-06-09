@@ -204,7 +204,7 @@ export default definePlugin({
     },
     // input can be a array of channels or a party
     filterIgnoredGuilds(input) {
-        if (!settings.store.hideActiveNowGuilds || !input) {
+        if (!input) {
             return false;
         }
         var voiceChannels = input.voiceChannels || input;
