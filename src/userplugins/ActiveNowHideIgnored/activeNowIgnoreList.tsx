@@ -85,16 +85,35 @@ export function getBlacklistedGuilds(): string[] {
     return [...blacklistedGuilds];
 }
 
+// Helper function to search recursively for any item by ID
+function findItemInChildren(items, targetId) {
+    if (!items) return null;
+
+    const itemsArray = Array.isArray(items) ? items : [items];
+
+    for (let i = 0; i < itemsArray.length; i++) {
+        const item = itemsArray[i];
+
+        // Check if this is the item we're looking for
+        if (item?.props?.id === targetId) {
+            return { container: itemsArray, index: i };
+        }
+
+        // If this item has children, search recursively
+        if (item?.props?.children) {
+            const result = findItemInChildren(item.props.children, targetId);
+            if (result) return result;
+        }
+    }
+
+    return null;
+}
+
 // Guild context menu patches
 const guildPopoutPatch: NavContextMenuPatchCallback = (children, { guild }: { guild: Guild, onClose(): void; }) => {
     if (!guild) return;
 
     const isBlacklisted = isGuildBlacklisted(guild.id);
-
-    // Find the index of the ignore menu item
-    const menuItemIndex = children.findIndex(child =>
-        child?.props?.id === "guild-context-leave-guild"
-    );
 
     const menuItem = (
         <Menu.MenuItem
@@ -110,25 +129,22 @@ const guildPopoutPatch: NavContextMenuPatchCallback = (children, { guild }: { gu
         />
     );
 
-    if (menuItemIndex !== -1) {
-        // Insert before the ignore item
-        children.splice(menuItemIndex, 0, menuItem);
+    // Search for the leaver server item using recursive search
+    const ignoreLocation = findItemInChildren(children, "leave-guild");
+
+    if (ignoreLocation) {
+        // Insert before the leaver server item
+        ignoreLocation.container.splice(ignoreLocation.index, 0, menuItem);
     } else {
-        // Fallback to end if ignore not found
         children.push(menuItem);
     }
+
 };
 
-// User context menu patches
 const userContextPatch: NavContextMenuPatchCallback = (children, { user }: { user?: User, onClose(): void; }) => {
     if (!user) return;
 
     const isBlacklisted = isUserBlacklisted(user.id);
-
-    // Find the index of the ignore menu item
-    const ignoreIndex = children.findIndex(child =>
-        child?.props?.id === "user-context-ignore"
-    );
 
     const menuItem = (
         <Menu.MenuItem
@@ -144,16 +160,140 @@ const userContextPatch: NavContextMenuPatchCallback = (children, { user }: { use
         />
     );
 
-    if (ignoreIndex !== -1) {
+    // Search for the ignore item using recursive search
+    const ignoreLocation = findItemInChildren(children, "ignore");
+
+    if (ignoreLocation) {
         // Insert before the ignore item
-        children.splice(ignoreIndex, 0, menuItem);
+        ignoreLocation.container.splice(ignoreLocation.index, 0, menuItem);
     } else {
-        // Fallback to end if ignore not found
         children.push(menuItem);
     }
 };
 
+// User context menu patches
+/*
+const userContextPatch: NavContextMenuPatchCallback = (children, { user }: { user?: User, onClose(): void; }) => {
+    console.log("[HideActiveNowIgnored] userContextPatch called", {
+        timestamp: new Date().toISOString(),
+        user: user ? { id: user.id, username: user.username } : null,
+        childrenCount: children.length
+    });
+
+    if (!user) {
+        console.log("[HideActiveNowIgnored] No user provided, exiting");
+        return;
+    }
+
+    const isBlacklisted = isUserBlacklisted(user.id);
+    console.log("[HideActiveNowIgnored] User blacklist status", {
+        userId: user.id,
+        username: user.username,
+        isBlacklisted
+    });
+
+    const menuItem = (
+        <Menu.MenuItem
+            label={isBlacklisted ? "Show in Active Now" : "Hide in Active Now"}
+            id="HideActiveNowIgnored-user"
+            action={() => {
+                console.log("[HideActiveNowIgnored] Menu item clicked", {
+                    userId: user.id,
+                    username: user.username,
+                    action: isBlacklisted ? "unhide" : "hide"
+                });
+
+                if (isBlacklisted) {
+                    removeUserFromBlacklist(user.id, user.username);
+                } else {
+                    addUserToBlacklist(user.id, user.username);
+                }
+            }}
+        />
+    );
+
+    // Function to search recursively for the ignore item
+    function findIgnoreItem(items, depth = 0) {
+        const indent = "  ".repeat(depth);
+        console.log(`${indent}[HideActiveNowIgnored] Searching at depth ${depth}, items:`, items?.length || 0);
+
+        if (!items) return null;
+
+        const itemsArray = Array.isArray(items) ? items : [items];
+
+        for (let i = 0; i < itemsArray.length; i++) {
+            const item = itemsArray[i];
+            console.log(`${indent}  Item ${i}:`, {
+                type: item?.type?.displayName || item?.type?.name || typeof item?.type,
+                id: item?.props?.id,
+                label: item?.props?.label,
+                hasChildren: !!item?.props?.children
+            });
+
+            // Check if this item is the ignore item
+            if (item?.props?.id === "ignore") {
+                console.log(`${indent}  Found ignore item at depth ${depth}, index ${i}!`);
+                return { container: itemsArray, index: i };
+            }
+
+            // If this item has children, search recursively
+            if (item?.props?.children) {
+                const result = findIgnoreItem(item.props.children, depth + 1);
+                if (result) return result;
+            }
+        }
+
+        return null;
+    }
+
+    // Search for the ignore item starting from the main children
+    const ignoreLocation = findIgnoreItem(children);
+
+    if (ignoreLocation) {
+        console.log("[HideActiveNowIgnored] Found ignore item, adding our item before it");
+        ignoreLocation.container.splice(ignoreLocation.index, 0, menuItem);
+        console.log("[HideActiveNowIgnored] Successfully inserted menu item");
+    } else {
+        console.log("[HideActiveNowIgnored] Ignore item not found, checking index 4 specifically");
+
+        // Let's specifically look at index 4 since you mentioned it should be there
+        const index4 = children[4];
+        if (index4?.props?.children) {
+            console.log("[HideActiveNowIgnored] Index 4 has children, adding to first MenuGroup");
+            const childrenArray = Array.isArray(index4.props.children) ? index4.props.children : [index4.props.children];
+
+            // Find the first MenuGroup in index 4's children
+            const firstMenuGroup = childrenArray.find(child =>
+                child?.type?.displayName === "MenuGroup" || child?.type?.name === "MenuGroup"
+            );
+
+            if (firstMenuGroup?.props?.children) {
+                console.log("[HideActiveNowIgnored] Adding to first MenuGroup in index 4");
+                const groupChildren = Array.isArray(firstMenuGroup.props.children)
+                    ? firstMenuGroup.props.children
+                    : [firstMenuGroup.props.children];
+                groupChildren.push(menuItem);
+                firstMenuGroup.props.children = groupChildren;
+            } else {
+                // Fallback: add to end of main children
+                console.log("[HideActiveNowIgnored] Fallback: adding to end of children");
+                children.push(menuItem);
+            }
+        } else {
+            // Final fallback
+            console.log("[HideActiveNowIgnored] Final fallback: adding to end of children");
+            children.push(menuItem);
+        }
+    }
+
+    console.log("[HideActiveNowIgnored] userContextPatch completed", {
+        finalChildrenCount: children.length,
+        timestamp: new Date().toISOString()
+    });
+};*/
+
 export const contextMenus = {
+    "channel-context": guildPopoutPatch, // check for guild id?
     "guild-header-popout": guildPopoutPatch,
     "guild-context": guildPopoutPatch,
     "user-context": userContextPatch,
