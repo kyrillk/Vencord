@@ -27,10 +27,10 @@ const settings = definePluginSettings({
         ],
         restartNeeded: true
     },
-    hideActiveNowGuilds: {
+    hideIgnoredUsers: {
+        description: "Hide ignored users in the main Active Now section",
         type: OptionType.BOOLEAN,
-        description: "Hide entire voice channels from ignored servers in Active Now",
-        default: false,
+        default: true,
         restartNeeded: false,
     },
     hideFriendsList: {
@@ -105,7 +105,7 @@ export default definePlugin({
     isIgnoredUser(user) {
         const ignoredUsers = (settings.store.ignoredUsers || "");
         const userId = user.id || user;
-        if (ignoredUsers.includes(userId) || RelationshipStore.isIgnored(userId)) {
+        if (ignoredUsers.includes(userId) || (RelationshipStore.isIgnored(userId)) && settings.store.hideIgnoredUsers) {
             return true;
         }
         return false;
