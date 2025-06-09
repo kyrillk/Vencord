@@ -8,6 +8,8 @@ import { definePluginSettings } from "@api/Settings";
 import definePlugin, { OptionType } from "@utils/types";
 import { RelationshipStore } from "@webpack/common";
 
+import { contextMenus, isGuildBlacklisted, isUserBlacklisted } from "./activeNowIgnoreList";
+
 enum ActiveNowHideIgnoredSettings {
     Off,
     HideServer,
@@ -39,18 +41,6 @@ const settings = definePluginSettings({
         default: true,
         restartNeeded: true,
     },
-    ignoredUsers: {
-        description: "List of user IDs to hide from Active Now (one per line)",
-        type: OptionType.STRING,
-        default: "",
-        restartNeeded: false,
-    },
-    ignoredGuilds: {
-        description: "List of guild IDs to hide from Active Now (one per line)",
-        type: OptionType.STRING,
-        default: "",
-        restartNeeded: false,
-    },
     Debug: {
         description: "Enable debug mode (will not filter ignored users)",
         type: OptionType.BOOLEAN,
@@ -60,12 +50,14 @@ const settings = definePluginSettings({
 });
 
 
+
+
 // it break them yeey
 export default definePlugin({
     name: "Active Now Hide Ignored",
     description: "Hides Active Now entries for ignored users.",
     authors: [{ name: "kyrillk", id: 0n }],
-
+    contextMenus,
     patches: [
         {
             find: "NOW_PLAYING_CARD_HOVERED,",
@@ -103,9 +95,8 @@ export default definePlugin({
     ],
     settings,
     isIgnoredUser(user) {
-        const ignoredUsers = (settings.store.ignoredUsers || "");
         const userId = user.id || user;
-        if (ignoredUsers.includes(userId) || (RelationshipStore.isIgnored(userId)) && settings.store.hideIgnoredUsers) {
+        if (isUserBlacklisted(userId) || (RelationshipStore.isIgnored(userId)) && settings.store.hideIgnoredUsers) {
             return true;
         }
         return false;
@@ -196,8 +187,7 @@ export default definePlugin({
 
 
     isIgnoredGuild(guild) {
-        const ignoredGuilds = (settings.store.ignoredGuilds || "");
-        if (ignoredGuilds.includes(guild)) {
+        if (isGuildBlacklisted(guild)) {
             return true;
         }
         return false;
