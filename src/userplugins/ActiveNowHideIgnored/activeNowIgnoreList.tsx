@@ -49,39 +49,39 @@ loadBlacklists();
 async function addUserToBlacklist(userId: string, username: string) {
     blacklistedUsers.add(userId);
     await saveBlacklists();
-    showToast(`Hidden ${username} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Hiding ${username} from Active Now`, Toasts.Type.SUCCESS);
 }
 
 async function removeUserFromBlacklist(userId: string, username: string) {
     blacklistedUsers.delete(userId);
     await saveBlacklists();
-    showToast(`Unhidden ${username} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Unhiding ${username} from Active Now`, Toasts.Type.SUCCESS);
 }
 
 async function addGuildToBlacklist(guildId: string, guildName: string) {
     blacklistedGuilds.add(guildId);
     await saveBlacklists();
-    showToast(`Hidden ${guildName} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Hiding ${guildName} from Active Now`, Toasts.Type.SUCCESS);
 }
 
 async function removeGuildFromBlacklist(guildId: string, guildName: string) {
     blacklistedGuilds.delete(guildId);
     await saveBlacklists();
-    showToast(`Unhidden ${guildName} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Unhiding ${guildName} from Active Now`, Toasts.Type.SUCCESS);
 }
 
 // Export helper functions for use in main plugin
 
 export function isUserBlacklisted(userId: string): boolean {
-    if (settings.store.whitelistUsers) {
+    /* if (settings.store.whitelistUsers) {
         return !blacklistedUsers.has(userId);
-    }
+    }*/
     return blacklistedUsers.has(userId);
 }
 
 export function isGuildBlacklisted(guildId: string): boolean {
     if (settings.store.whitelistServers) {
-        return !(blacklistedGuilds.has(guildId));
+        return !blacklistedGuilds.has(guildId);
     }
     return blacklistedGuilds.has(guildId);
 }
@@ -129,7 +129,7 @@ const guildPopoutPatch: NavContextMenuPatchCallback = (children, { guild }: { gu
             label={isBlacklisted ? "Show in Active Now" : "Hide in Active Now"}
             id="HideActiveNowIgnored-guild"
             action={() => {
-                if (isBlacklisted) {
+                if (settings.store.whitelistServers ? !isBlacklisted : !isBlacklisted) {
                     removeGuildFromBlacklist(guild.id, guild.name);
                 } else {
                     addGuildToBlacklist(guild.id, guild.name);
@@ -154,12 +154,15 @@ const userContextPatch: NavContextMenuPatchCallback = (children, { user }: { use
     if (!user) return;
 
     const isBlacklisted = isUserBlacklisted(user.id);
+    console.log(isBlacklisted);
 
     const menuItem = (
         <Menu.MenuItem
             label={isBlacklisted ? "Show in Active Now" : "Hide in Active Now"}
             id="HideActiveNowIgnored-user"
             action={() => {
+                // fix this
+                // settings.store.whitelistUsers ? !isBlacklisted : !isBlacklisted
                 if (isBlacklisted) {
                     removeUserFromBlacklist(user.id, user.username);
                 } else {
