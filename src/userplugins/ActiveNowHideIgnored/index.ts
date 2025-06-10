@@ -13,12 +13,12 @@ import { contextMenus, isGuildBlacklisted, isUserBlacklisted } from "./activeNow
 enum ActiveNowHideIgnoredSettings {
     Off,
     HideServer,
-    HideUser
+    HideUser,
 }
 
 
 // const logger = new Logger("ActiveNowHideIgnored");
-const settings = definePluginSettings({
+export const settings = definePluginSettings({
     hideActiveNow: {
         type: OptionType.SELECT,
         description: "How to handle ignored users/ignored users in voice channel in the main Active Now section",
@@ -28,6 +28,16 @@ const settings = definePluginSettings({
             { label: "off", value: ActiveNowHideIgnoredSettings.Off }
         ],
         restartNeeded: true
+    },
+    whitelistUsers: {
+        description: "Turn the blacklist into a whitelist for users, so only the users in the list will be shown",
+        type: OptionType.BOOLEAN,
+        restartNeeded: false,
+    },
+    whitelistServers: {
+        description: "Turn the blacklist into a whitelist for server, so only the servers in the list will be shown",
+        type: OptionType.BOOLEAN,
+        restartNeeded: false,
     },
     hideIgnoredUsers: {
         description: "Hide ignored users in the main Active Now section",

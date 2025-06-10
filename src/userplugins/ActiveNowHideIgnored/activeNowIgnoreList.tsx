@@ -9,6 +9,8 @@ import * as DataStore from "@api/DataStore";
 import { Menu, showToast, Toasts } from "@webpack/common";
 import { Guild, User } from "discord-types/general";
 
+import { settings } from "./index";
+
 // Blacklist storage
 let blacklistedUsers: Set<string> = new Set();
 let blacklistedGuilds: Set<string> = new Set();
@@ -69,11 +71,18 @@ async function removeGuildFromBlacklist(guildId: string, guildName: string) {
 }
 
 // Export helper functions for use in main plugin
+
 export function isUserBlacklisted(userId: string): boolean {
+    if (settings.store.whitelistUsers) {
+        return !blacklistedUsers.has(userId);
+    }
     return blacklistedUsers.has(userId);
 }
 
 export function isGuildBlacklisted(guildId: string): boolean {
+    if (settings.store.whitelistServers) {
+        return !(blacklistedGuilds.has(guildId));
+    }
     return blacklistedGuilds.has(guildId);
 }
 
