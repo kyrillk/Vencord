@@ -8,25 +8,13 @@ import { definePluginSettings } from "@api/Settings";
 import definePlugin, { OptionType } from "@utils/types";
 import { RelationshipStore } from "@webpack/common";
 
-import { contextMenus, isGuildBlacklisted, isUserBlacklisted } from "./activeNowIgnoreList";
-
-enum ActiveNowHideIgnoredSettings {
-    Off,
-    HideServer,
-    HideUser,
-}
-
+import { contextMenus, isGuildBlacklisted, isUserBlacklisted, ResetButton } from "./activeNowIgnoreList";
 
 // const logger = new Logger("ActiveNowHideIgnored");
 export const settings = definePluginSettings({
     hideActiveNow: {
-        type: OptionType.SELECT,
-        description: "How to handle ignored users/ignored users in voice channel in the main Active Now section",
-        options: [
-            { label: "hide user", value: ActiveNowHideIgnoredSettings.HideUser, default: true },
-            { label: "hide server", value: ActiveNowHideIgnoredSettings.HideServer },
-            { label: "off", value: ActiveNowHideIgnoredSettings.Off }
-        ],
+        type: OptionType.BOOLEAN,
+        description: "How to handle hidden users/ignored users in voice channel in the main Active Now section",
         restartNeeded: true
     },
     whitelistUsers: {
@@ -45,17 +33,10 @@ export const settings = definePluginSettings({
         default: true,
         restartNeeded: false,
     },
-    hideFriendsList: {
-        description: "Hide Active Now entries for ignored users in the friends list",
-        type: OptionType.BOOLEAN,
-        default: true,
-        restartNeeded: true,
-    },
-    Debug: {
-        description: "Enable debug mode (will not filter ignored users)",
-        type: OptionType.BOOLEAN,
-        default: false,
-        restartNeeded: false,
+    resetData: {
+        type: OptionType.COMPONENT,
+        description: "Reset all blacklisted/whitelisted users and servers",
+        component: ResetButton
     },
 });
 
@@ -68,6 +49,7 @@ export default definePlugin({
     description: "Hides Active Now entries for ignored users.",
     authors: [{ name: "kyrillk", id: 0n }],
     contextMenus,
+    settings,
     patches: [
         {
             find: "NOW_PLAYING_CARD_HOVERED,",
@@ -75,7 +57,7 @@ export default definePlugin({
                 match: /{partiedMembers:(\i)(.*)voiceChannels:(\i)(.*),\i=\i\(\)\(\i,\i\);/,
                 replace: "$&if($self.anyIgnoredUser($1) || $self.filterIgnoredGuilds($3)){return null;}",
             },
-            predicate: () => settings.store.hideActiveNow === ActiveNowHideIgnoredSettings.HideServer
+            predicate: () => settings.store.hideActiveNow
         },
         {
             find: "NOW_PLAYING_CARD_HOVERED,",
@@ -83,7 +65,7 @@ export default definePlugin({
                 match: /(\{party:)(\i)(.*?\}=\i)(.*=\i,\i=(\i)(.*),\i=\i\(\)\(\i,\i\);)/,
                 replace: "$1unfilter_$2$3,$2=$self.partyFilterIgnoredUsers(unfilter_$2)$4if($5 == 0 || $self.filterIgnoredGuilds($2)){return null;}",
             },
-            predicate: () => settings.store.hideActiveNow === ActiveNowHideIgnoredSettings.HideUser
+            predicate: () => !settings.store.hideActiveNow
         },
         /* fix wrong online count here
          , Q = i.useCallback(e => {

@@ -6,7 +6,7 @@
 
 import { NavContextMenuPatchCallback } from "@api/ContextMenu";
 import * as DataStore from "@api/DataStore";
-import { Menu, showToast, Toasts } from "@webpack/common";
+import { Button, Menu, showToast, Toasts } from "@webpack/common";
 import { Guild, User } from "discord-types/general";
 
 import { settings } from "./index";
@@ -269,3 +269,30 @@ export const contextMenus = {
     "user-profile-actions": userContextPatch,
     "user-profile-overflow-menu": userContextPatch,
 };
+
+async function resetBlacklists() {
+    try {
+        blacklistedUsers.clear();
+        blacklistedGuilds.clear();
+
+        // Clear from DataStore
+        await DataStore.del("activeNowHideIgnored_blacklistedUsers");
+        await DataStore.del("activeNowHideIgnored_blacklistedGuilds");
+
+        showToast("Reset all blacklists", Toasts.Type.SUCCESS);
+    } catch (e) {
+        console.error("Failed to reset blacklists:", e);
+        showToast("Failed to reset blacklists", Toasts.Type.FAILURE);
+    }
+}
+
+// Reset Button Component
+export const ResetButton = () => (
+    <Button
+        onClick={resetBlacklists}
+        size={Button.Sizes.SMALL}
+        color={Button.Colors.RED}
+    >
+        Reset All Data
+    </Button>
+);
