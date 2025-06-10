@@ -81,7 +81,7 @@ export default definePlugin({
             find: "NOW_PLAYING_CARD_HOVERED,",
             replacement: {
                 match: /(\{party:)(\i)(.*?\}=\i)(.*=\i,\i=(\i)(.*),\i=\i\(\)\(\i,\i\);)/,
-                replace: "$1unfilter_$2$3,$2=$self.partyFilterIgnoredUsers(unfilter_$2)$4if($5 == 0 || $self.filterIgnoredGuilds($2)){return null;} console.log('Active Now Hide Ignored: Party Filtered', $2);",
+                replace: "$1unfilter_$2$3,$2=$self.partyFilterIgnoredUsers(unfilter_$2)$4if($5 == 0 || $self.filterIgnoredGuilds($2)){return null;}",
             },
             predicate: () => settings.store.hideActiveNow === ActiveNowHideIgnoredSettings.HideUser
         },

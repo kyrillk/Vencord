@@ -154,7 +154,6 @@ const userContextPatch: NavContextMenuPatchCallback = (children, { user }: { use
     if (!user) return;
 
     const isBlacklisted = isUserBlacklisted(user.id);
-    console.log(isBlacklisted);
 
     const menuItem = (
         <Menu.MenuItem
@@ -181,7 +180,89 @@ const userContextPatch: NavContextMenuPatchCallback = (children, { user }: { use
     }
 };
 
+// Helper function to extract ID and type from party data
+function getPartyInfo(party: any): { type: "guild" | "user", id: string, name: string; } | null {
+    if (!party || !party.id) return null;
+
+    if (party.id.startsWith("channel-")) {
+        // Extract guild info from voice channels
+        const voiceChannel = party.voiceChannels?.[0];
+        if (voiceChannel?.guild) {
+            return {
+                type: "guild",
+                id: voiceChannel.guild.id,
+                name: voiceChannel.guild.name
+            };
+        }
+    } else if (party.id.startsWith("user-")) {
+        // Extract user ID from party.id
+        const userId = party.id.replace("user-", "");
+        const user = party.priorityMembers?.[0]?.user || party.partiedMembers?.[0];
+        if (user) {
+            return {
+                type: "user",
+                id: userId,
+                name: user.globalName || user.username
+            };
+        }
+    }
+
+    return null;
+}
+
+// Updated context menu patch for the Active Now menu
+const activeNowMenuPatch: NavContextMenuPatchCallback = (children, { party }) => {
+    // The props should contain party data or similar context
+    if (!party) return;
+
+    const partyInfo = getPartyInfo(party);
+    if (!partyInfo) return;
+
+    const isBlacklisted = partyInfo.type === "guild"
+        ? isGuildBlacklisted(partyInfo.id)
+        : isUserBlacklisted(partyInfo.id);
+
+    const menuItem = (
+        <Menu.MenuItem
+            label={isBlacklisted ? "Show in Active Now" : "Hide in Active Now"}
+            id={`HideActiveNowIgnored-${partyInfo.type}`}
+            action={() => {
+                if (partyInfo.type === "guild") {
+                    if (settings.store.whitelistServers ? !isBlacklisted : isBlacklisted) {
+                        removeGuildFromBlacklist(partyInfo.id, partyInfo.name);
+                    } else {
+                        addGuildToBlacklist(partyInfo.id, partyInfo.name);
+                    }
+                } else {
+                    if (settings.store.whitelistUsers ? !isBlacklisted : isBlacklisted) {
+                        removeUserFromBlacklist(partyInfo.id, partyInfo.name);
+                    } else {
+                        addUserToBlacklist(partyInfo.id, partyInfo.name);
+                    }
+                }
+            }}
+        />
+    );
+
+    // Add the menu item to the context menu
+    children.unshift(menuItem);
+};
+
+const debugPatch: NavContextMenuPatchCallback = (children, ...args) => {
+    console.log("=== NOW PLAYING MENU DEBUG ===");
+    console.log("Children structure:", JSON.stringify(children, null, 2));
+    console.log("Arguments:", args);
+    console.log("Args length:", args.length);
+    args.forEach((arg, index) => {
+        console.log(`Arg ${index}:`, arg);
+    });
+    console.log("===============================");
+
+    // Don't add menu items yet, just debug
+};
+
 export const contextMenus = {
+    "now-playing-menu": activeNowMenuPatch,
     "guild-header-popout": guildPopoutPatch,
     "guild-context": guildPopoutPatch,
     "user-context": userContextPatch,
