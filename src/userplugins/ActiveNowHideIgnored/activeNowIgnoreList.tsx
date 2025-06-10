@@ -49,33 +49,33 @@ loadBlacklists();
 async function addUserToBlacklist(userId: string, username: string) {
     blacklistedUsers.add(userId);
     await saveBlacklists();
-    showToast(`Hiding ${username} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Added ${username} to list`, Toasts.Type.SUCCESS);
 }
 
 async function removeUserFromBlacklist(userId: string, username: string) {
     blacklistedUsers.delete(userId);
     await saveBlacklists();
-    showToast(`Unhiding ${username} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Removed ${username} from list`, Toasts.Type.SUCCESS);
 }
 
 async function addGuildToBlacklist(guildId: string, guildName: string) {
     blacklistedGuilds.add(guildId);
     await saveBlacklists();
-    showToast(`Hiding ${guildName} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Added ${guildName} to list`, Toasts.Type.SUCCESS);
 }
 
 async function removeGuildFromBlacklist(guildId: string, guildName: string) {
     blacklistedGuilds.delete(guildId);
     await saveBlacklists();
-    showToast(`Unhiding ${guildName} from Active Now`, Toasts.Type.SUCCESS);
+    showToast(`Removed ${guildName} from list`, Toasts.Type.SUCCESS);
 }
 
 // Export helper functions for use in main plugin
 
 export function isUserBlacklisted(userId: string): boolean {
-    /* if (settings.store.whitelistUsers) {
+    if (settings.store.whitelistUsers) {
         return !blacklistedUsers.has(userId);
-    }*/
+    }
     return blacklistedUsers.has(userId);
 }
 
@@ -184,7 +184,6 @@ const userContextPatch: NavContextMenuPatchCallback = (children, { user }: { use
 };
 
 export const contextMenus = {
-    "channel-context": guildPopoutPatch, // check for guild id?
     "guild-header-popout": guildPopoutPatch,
     "guild-context": guildPopoutPatch,
     "user-context": userContextPatch,

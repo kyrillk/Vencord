@@ -29,11 +29,11 @@ export const settings = definePluginSettings({
         ],
         restartNeeded: true
     },
-    /* whitelistUsers: {
+    whitelistUsers: {
         description: "Turn the blacklist into a whitelist for users, so only the users in the list will be shown",
         type: OptionType.BOOLEAN,
         restartNeeded: false,
-    },*/
+    },
     whitelistServers: {
         description: "Turn the blacklist into a whitelist for server, so only the servers in the list will be shown",
         type: OptionType.BOOLEAN,
@@ -118,6 +118,9 @@ export default definePlugin({
 
     partyFilterIgnoredUsers(party) {
         var filteredPartyMembers = party.partiedMembers.filter(user => !this.isIgnoredUser(user));
+        if (filteredPartyMembers.length === 0) {
+            return { ...party, partiedMembers: filteredPartyMembers };
+        }
         const filteredParty = {
             ...party,
             partiedMembers: filteredPartyMembers,
