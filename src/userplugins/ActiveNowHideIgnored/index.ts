@@ -16,17 +16,17 @@ export const settings = definePluginSettings({
         type: OptionType.BOOLEAN,
         description: "Hide/Show servers instead of just users in the Active Now section",
         default: false,
-        restartNeeded: true
+        restartNeeded: false
     },
     whitelistUsers: {
         description: "Turn the blacklist into a whitelist for users, so only the users in the list will be shown",
         type: OptionType.BOOLEAN,
-        restartNeeded: true,
+        restartNeeded: false,
     },
     whitelistServers: {
         description: "Turn the blacklist into a whitelist for server, so only the servers in the list will be shown",
         type: OptionType.BOOLEAN,
-        restartNeeded: true,
+        restartNeeded: false,
     },
     hideIgnoredUsers: {
         description: "Hide ignored users in the main Active Now section",
@@ -58,8 +58,8 @@ export default definePlugin({
         {
             find: "NOW_PLAYING_CARD_HOVERED,",
             replacement: {
-                match: /(\{party:)(\i)(.*?\}=\i)(.*=\i,\i=(\i)(.*),\i=\i\(\)\(\i,\i\);)/,
-                replace: "$1unfilter_$2$3,$2=$self.partyFilterIgnoredUsers(unfilter_$2)$4if($self.shoudBeNull(unfilter_$2, $2, $5)){return null;}",
+                match: /(\{party:)(\i)(.*?\}=\i)(.*,\i=\i\(\)\(\i,\i\);)/,
+                replace: "$1unfilter_$2$3,$2=$self.partyFilterIgnoredUsers(unfilter_$2)$4if($self.shoudBeNull(unfilter_$2, $2)){return null;}",
             },
             predicate: () => !settings.store.hideActiveNow
         },
@@ -99,11 +99,17 @@ function anyIgnoredUser(users) {
 // party functions
 
 function partyFilterIgnoredUsers(party) {
+
+
     var filteredPartyMembers = party.partiedMembers.filter(user => !isIgnoredUser(user));
+    var filteredPartyMembersLength = filteredPartyMembers.length;
+    if (filteredPartyMembersLength === 0) return { ...party, partiedMembers: [] };
 
-    if (filteredPartyMembers.length === 0) return { ...party, partiedMembers: filteredPartyMembers };
+    if (settings.store.hideActiveNow) {
+        if (settings.store.whitelistUsers) return party;
+        if (filteredPartyMembersLength !== party.partiedMembers.length) return { ...party, partiedMembers: [] };
+    }
 
-    if (settings.store.hideActiveNow && settings.store.whitelistServers) return party;
 
 
     const filteredParty = {
@@ -195,9 +201,8 @@ function filterIgnoredGuilds(input) {
 }
 
 // add logic for whitelist
-function shoudBeNull(unFilteredParty, filteredParty, partySize) {
-    if (!unFilteredParty || !filteredParty || !partySize) return true;
-    if (partySize === 0 || filterIgnoredGuilds(unFilteredParty)) return true;
-    // if (anyIgnoredUser(unFilteredParty) && settings.store.hideActiveNow && !settings.store.whitelistServers) return true;
+function shoudBeNull(unFilteredParty, filteredParty) {
+    if (!unFilteredParty || !filteredParty) return true;
+    if (filteredParty.partiedMembers.length === 0 || filterIgnoredGuilds(unFilteredParty)) return true;
     return false;
 }
