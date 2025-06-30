@@ -1,23 +1,19 @@
-name: Sync Fork
+            - name: Sync Upstream
+  # You may pin to the exact commit or the version.
+  # uses: zhangnew/sync-upstream@65060a2fa0bbbbf7ef07add408d1ed3dae9e53f8
+  uses: zhangnew/sync-upstream@v1
+  with:
+    # User name - required for git commits
+    username: # optional, default is sync-upstream-bot
+    # User email - required for git commits
+    useremail: # optional, default is bot@github.com
+    # Upstream repository owner/name. For example, zhangnew/sync-upstream
+    upstream: # default is master
+    # Upstream branch to merge from. For example, master
+    upstream-branch: # default is master
+    # Branch to merge to. For example, master
+    branch: # default is myPluginsKyrillk
+    # Personal access token (PAT) used to fetch the repository. The PAT is configured with the local git config, which enables your scripts to run authenticated git commands. The post-job step removes the PAT. We recommend using a service account with the least permissions necessary. Also when generating a new PAT, select the least scopes necessary. [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
 
-on:
-  schedule:
-    - cron: '0 12 * * *'  # Every day at noon UTC
-  workflow_dispatch:  # Allows manual triggering
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Sync from upstream
-        run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
-          git remote add upstream https://github.com/Vendicated/Vencord.git
-          git fetch upstream
-          git checkout main
-          git merge upstream/main --allow-unrelated-histories --no-edit
-          git push origin main
+    token: # optional, default is ${{ github.token }}
+          
