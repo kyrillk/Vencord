@@ -1,7 +1,5 @@
 name: sync
 
-permissions: write-all              # grant write permission
-
 on: 
   schedule:
     - cron: '0 0 * * 1'             # scheduled for 00:00 every Monday
