@@ -59,7 +59,7 @@ export default definePlugin({
             find: "NOW_PLAYING_CARD_HOVERED,",
             replacement: {
                 match: /(\{party:)(\i)(.*?\}=\i)(.*,\i=\i\(\)\(\i,\i\);)/,
-                replace: "$1unfilter_$2$3,$2=$self.partyFilterIgnoredUsers(unfilter_$2)$4if($self.shoudBeNull(unfilter_$2, $2)){return null;}",
+                replace: "$1unfilter_$2$3,$2=$self.partyFilterIgnoredUsers(unfilter_$2)$4if($self.shoudBeNull($2)){return null;}",
             },
             predicate: () => !settings.store.hideActiveNow
         },
@@ -201,8 +201,8 @@ function filterIgnoredGuilds(input) {
 }
 
 // add logic for whitelist
-function shoudBeNull(unFilteredParty, filteredParty) {
-    if (!unFilteredParty || !filteredParty) return true;
-    if (filteredParty.partiedMembers.length === 0 || filterIgnoredGuilds(unFilteredParty)) return true;
+function shoudBeNull(Party) {
+    if (!Party) return true;
+    if (Party.partiedMembers.length === 0 || filterIgnoredGuilds(Party)) return true;
     return false;
 }
