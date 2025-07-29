@@ -21,6 +21,4 @@ lerna-debug.log*
 
 
 ExtensionCache/
-settings/
-
-src/userplugins/ActiveNowHideIgnored/test.js
+/settings
