@@ -18,6 +18,12 @@ export const settings = definePluginSettings({
         default: false,
         restartNeeded: false
     },
+    splitVoiceChannels: {
+        description: "Show separate cards for each voice channel instead of combining them",
+        type: OptionType.BOOLEAN,
+        default: false,
+        restartNeeded: false
+    },
     whitelistUsers: {
         description: "Turn the blacklist into a whitelist for users, so only the users in the list will be shown",
         type: OptionType.BOOLEAN,
@@ -55,6 +61,19 @@ export default definePlugin({
     contextMenus,
     settings,
     patches: [
+        // Patch to split parties with multiple voice channels into separate cards
+        // This patches the .map() in function D() where nowPlayingCards are rendered
+        // {
+        //     find: "nowPlayingCards,loaded:",
+        //     replacement: {
+        //         // Match: e.map(e=>{let{party:t}=e;return
+        //         // The pattern: variable.map(param=>{let{party:var}=param;return
+        //         match: /(\i)\.map\((\i)=>\{let\{party:(\i)\}=\2;return/,
+        //         replace: "$1.flatMap(c=>$self.settings.store.splitVoiceChannels&&c.party&&c.party.voiceChannels&&c.party.voiceChannels.length>1?$self.splitPartyByVoiceChannels(c.party).map(party=>({...c,party})):c).map($2=>{let{party:$3}=$2;return"
+        //     },
+        //     predicate: () => settings.store.splitVoiceChannels
+        // },
+        // Patch to filter parties (existing patch)
         {
             find: "NOW_PLAYING_CARD_HOVERED,",
             replacement: {
@@ -63,15 +82,6 @@ export default definePlugin({
             },
             predicate: () => !settings.store.hideActiveNow
         },
-        /* fix wrong online count here
-         , Q = i.useCallback(e => {
-                    const n = function (e, t, n) {
-                        switch (e) {
-                            case T.pJs.ONLINE:
-                                return P.intl.formatToPlainString(P.t.BagU2d, {
-                                    online: t.toString()
-        */
-        // hide ignored users in friends list
         {
             find: "}=this.state,{children:",
             replacement: {
@@ -84,6 +94,29 @@ export default definePlugin({
     isIgnoredUser,
     partyFilterIgnoredUsers,
     shoudBeNull,
+    splitPartyByVoiceChannels,
+
+    // Split a card's party into multiple cards if it has multiple voice channels
+    maybeSplitCard(card: any) {
+        if (!card?.party) return [card];
+
+        const { party } = card;
+        if (!party.voiceChannels || party.voiceChannels.length <= 1) {
+            return [card];
+        }
+
+        // DEBUG: Log when splitting and inspect voiceChannels
+        console.log("[ActiveNowHideIgnored] Splitting card for party:", party.id, party.voiceChannels);
+        party.voiceChannels.forEach((vc, idx) => {
+            console.log(`[ActiveNowHideIgnored] voiceChannel[${idx}] =`, vc);
+        });
+
+        // Split the party and create new card objects
+        return splitPartyByVoiceChannels(party).map(newParty => ({
+            ...card,
+            party: newParty
+        }));
+    },
 });
 
 function isIgnoredUser(user) {
@@ -206,3 +239,43 @@ function shoudBeNull(Party) {
     if (Party.partiedMembers.length === 0 || filterIgnoredGuilds(Party)) return true;
     return false;
 }
+
+// Split a party with multiple voice channels into separate parties (one per voice channel)
+function splitPartyByVoiceChannels(party) {
+    if (!party || !party.voiceChannels || party.voiceChannels.length <= 1) {
+        return [party]; // No splitting needed
+    }
+
+    return party.voiceChannels.map(voiceChannel => {
+        const membersInChannel = voiceChannel.members || [];
+        const memberIds = new Set(membersInChannel.map(m => m.id));
+
+        // Filter partiedMembers safely
+        const filteredPartiedMembers = Array.isArray(party.partiedMembers)
+            ? party.partiedMembers.filter(member => member && member.id && memberIds.has(member.id))
+            : [];
+
+        // Log any invalid priority members for debugging
+        if (Array.isArray(party.priorityMembers)) {
+            party.priorityMembers.forEach(pm => {
+                if (!pm?.user?.id) {
+                    console.warn("Invalid priority member found:", pm);
+                }
+            });
+        }
+
+        // Filter priorityMembers safely
+        const filteredPriorityMembers = Array.isArray(party.priorityMembers)
+            ? party.priorityMembers.filter(pm => pm?.user?.id && memberIds.has(pm.user.id))
+            : [];
+
+        return {
+            ...party,
+            partiedMembers: filteredPartiedMembers.length > 0 ? filteredPartiedMembers : membersInChannel,
+            priorityMembers: filteredPriorityMembers,
+            voiceChannels: [voiceChannel], // Only this voice channel
+            currentActivities: [], // Activities don't apply to split voice channel cards
+        };
+    });
+}
+
