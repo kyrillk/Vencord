@@ -61,19 +61,6 @@ export default definePlugin({
     contextMenus,
     settings,
     patches: [
-        // Patch to split parties with multiple voice channels into separate cards
-        // This patches the .map() in function D() where nowPlayingCards are rendered
-        // {
-        //     find: "nowPlayingCards,loaded:",
-        //     replacement: {
-        //         // Match: e.map(e=>{let{party:t}=e;return
-        //         // The pattern: variable.map(param=>{let{party:var}=param;return
-        //         match: /(\i)\.map\((\i)=>\{let\{party:(\i)\}=\2;return/,
-        //         replace: "$1.flatMap(c=>$self.settings.store.splitVoiceChannels&&c.party&&c.party.voiceChannels&&c.party.voiceChannels.length>1?$self.splitPartyByVoiceChannels(c.party).map(party=>({...c,party})):c).map($2=>{let{party:$3}=$2;return"
-        //     },
-        //     predicate: () => settings.store.splitVoiceChannels
-        // },
-        // Patch to filter parties (existing patch)
         {
             find: "NOW_PLAYING_CARD_HOVERED,",
             replacement: {
@@ -93,30 +80,7 @@ export default definePlugin({
     ],
     isIgnoredUser,
     partyFilterIgnoredUsers,
-    shoudBeNull,
-    splitPartyByVoiceChannels,
-
-    // Split a card's party into multiple cards if it has multiple voice channels
-    maybeSplitCard(card: any) {
-        if (!card?.party) return [card];
-
-        const { party } = card;
-        if (!party.voiceChannels || party.voiceChannels.length <= 1) {
-            return [card];
-        }
-
-        // DEBUG: Log when splitting and inspect voiceChannels
-        console.log("[ActiveNowHideIgnored] Splitting card for party:", party.id, party.voiceChannels);
-        party.voiceChannels.forEach((vc, idx) => {
-            console.log(`[ActiveNowHideIgnored] voiceChannel[${idx}] =`, vc);
-        });
-
-        // Split the party and create new card objects
-        return splitPartyByVoiceChannels(party).map(newParty => ({
-            ...card,
-            party: newParty
-        }));
-    },
+    shoudBeNull
 });
 
 function isIgnoredUser(user) {
@@ -132,6 +96,26 @@ function anyIgnoredUser(users) {
 // party functions
 
 function partyFilterIgnoredUsers(party) {
+    // --- BEGIN: Remove voice channels not from the same guild as the first one ---
+    if (party.voiceChannels && party.voiceChannels.length > 1) {
+        const firstGuildId = party.voiceChannels[0]?.guild?.id;
+        if (firstGuildId) {
+            // Filter voiceChannels to only those from the same guild
+            const filteredVoiceChannels = party.voiceChannels.filter(vc => vc.guild?.id === firstGuildId);
+
+            // Collect all user IDs in the remaining channels
+            const remainingUserIds = new Set(filteredVoiceChannels.flatMap(vc => (vc.members || []).map(m => m.id)));
+
+            // Filter partiedMembers to only those present in the remaining channels
+            party = {
+                ...party,
+                voiceChannels: filteredVoiceChannels,
+                partiedMembers: Array.isArray(party.partiedMembers)
+                    ? party.partiedMembers.filter(m => remainingUserIds.has(m.id))
+                    : []
+            };
+        }
+    }
 
 
     var filteredPartyMembers = party.partiedMembers.filter(user => !isIgnoredUser(user));
@@ -159,6 +143,10 @@ function partyFilterIgnoredUsers(party) {
             .map(voiceChannel => voiceChannelFilterIgnoredUsers(voiceChannel))
             .filter(voiceChannel => voiceChannel !== null && voiceChannel !== undefined),
     };
+    console.debug("[ActiveNowHideIgnored] Party modified", {
+        before: party,
+        after: filteredParty
+    });
     return filteredParty;
 }
 
