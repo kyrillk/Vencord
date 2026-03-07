@@ -2,8 +2,8 @@ name: Sync Fork with Upstream
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Every day at 6am UTC
-  workflow_dispatch:      # Allows manual trigger
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -19,6 +19,5 @@ jobs:
         run: |
           git remote add upstream https://github.com/Vendicated/Vencord.git
           git fetch upstream
-          git checkout main
-          git merge upstream/main --no-edit
-          git push origin main
+          git merge upstream/${{ github.ref_name }} --no-edit
+          git push origin ${{ github.ref_name }}
